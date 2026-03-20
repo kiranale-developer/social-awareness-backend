@@ -1,13 +1,13 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const pool = require("../config/database");
-const validatePassword = require("../utils/passwordVAlidator");
-const validateEmail = require("../utils/emailValidator");
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
+import pool from '../config/database.js';
+import validatePassword from '../utils/passwordVAlidator.js';
+import validateEmail from '../utils/emailValidator.js';
 
 
 //Register User
-exports.register = async (req,res) => {
+export const register = async (req,res) => {
 
     try{
         const {name, email, password} = req.body;
@@ -19,6 +19,7 @@ exports.register = async (req,res) => {
         //check email validation
         if(!validateEmail(email)){
             return res.status(400).json({message:"Please Enter Valid Email"});
+            
         }
 
         //check password validation
@@ -27,7 +28,7 @@ exports.register = async (req,res) => {
         }
 
         //check is user already exist
-        const [existingUser] = await pool.query("SELECT * FROM USERS WHERE email = ?",[email]);
+        const [existingUser] = await pool.query("SELECT * FROM users WHERE email = ?",[email]);
 
         if(existingUser.length > 0){
             return res.status(400).json({message:" User is already exists"});
@@ -50,7 +51,7 @@ exports.register = async (req,res) => {
 };
 
 //LOGIN
-exports.login = async (req, res) => {
+export const login = async (req, res) => {
     try{
         const {email,password}  = req.body;
 
@@ -64,7 +65,7 @@ exports.login = async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({message: "Invalic Credentails"});
+            return res.status(400).json({message: "Invalid Credentails"});
         }
         const token = jwt.sign(
             {id:user.id, role:user.role},

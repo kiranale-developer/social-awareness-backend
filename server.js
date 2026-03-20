@@ -1,41 +1,40 @@
-require("dotenv").config();
-const express = require ("express");
-//for frontend
-const cors = require("cors");
+import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
 
+import authRoutes from "./routes/authRoutes.js";
+import campaignRoutes from "./routes/campaignRoutes.js";
+import voteRoutes from "./routes/voteRoutes.js";
+
+import { protect } from "./middleware/authMiddleware.js";
+
+dotenv.config();
 
 const app = express();
 
-const { protect } = require("./middleware/authMiddleware");
-
-const testRoutes = require("./routes/testRoutes");
-const authRoutes = require("./routes/authRoutes");
-
-
-//Middleware
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// Routes
+app.use("/api/auth", authRoutes);
 
-//use routes
-app.use("/api",testRoutes);
-
-app.use("/api/auth",authRoutes);
-
-//check protedted api
-app.use("/api/protected",protect,(req,res)=>{
+app.use("/api/protected", protect, (req, res) => {
     res.json({
-        message: " Protected data accessed",
-        user : req.user
+        message: "Protected data accessed",
+        user: req.user
     });
 });
 
+app.use("/api/campaigns", campaignRoutes);
+app.use("/api/votes", voteRoutes);
 
-app.get("/",(req,res)=>{
+// Test route
+app.get("/", (req, res) => {
     res.send("API is Working");
 });
 
-app.listen(process.env.PORT,()=>{
-    console.log("Server running");
+// Start server
+app.listen(process.env.PORT, () => {
+    console.log(`Server running on port ${process.env.PORT}`);
 });
-
