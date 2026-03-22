@@ -155,6 +155,22 @@ export const getCampaigns = async (req, res) => {
 };
 
 
+export const getAllCampaigns = async (req, res) => {
+    try {
+        const [campaigns] = await db.execute("SELECT * FROM campaigns");
+
+        res.json({
+            total: campaigns.length,
+            campaigns
+        });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+
 
 
 
