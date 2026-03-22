@@ -5,6 +5,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import campaignRoutes from "./routes/campaignRoutes.js";
 import voteRoutes from "./routes/voteRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 import { protect } from "./middleware/authMiddleware.js";
 
@@ -18,6 +19,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/admin",adminRoutes);
 
 app.use("/api/protected", protect, (req, res) => {
     res.json({
