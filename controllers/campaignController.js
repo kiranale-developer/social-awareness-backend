@@ -1,11 +1,17 @@
 import db from '../config/database.js';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import validateDates from '../utils/validateDates.js';
-import validateImage from '../utils/validateImage.js';
 import validateEmail from '../utils/emailValidator.js';
 
+
+
+// CREATE CAMPAIGN
 export const createCampaign = async (req, res) => {
   try {
+    const user_id = req.user.id;
     const {
       title,
       description,
@@ -17,7 +23,7 @@ export const createCampaign = async (req, res) => {
       start_date,
       end_date,
     } = req.body;
-    const user_id = req.user.id;
+
 
     if (
       !title ||
@@ -88,9 +94,13 @@ export const createCampaign = async (req, res) => {
   }
 };
 
+
+
+// UPDATE CAMPAIGN
 export const updateCampaign = async (req, res) => {
   try {
-    const { id } = req.params;
+    
+    const { campaign_id } = req.params;
     const user_id = req.user.id;
     const user_role = req.user.role;
 
@@ -102,20 +112,17 @@ export const updateCampaign = async (req, res) => {
       category,
       campaign_type,
       goals,
-      image_url,
       start_date,
       end_date,
     } = req.body;
 
     //check campaign in database
     const [exist] = await db.execute(`SELECT * FROM campaigns WHERE id = ?`, [
-      id,
-    ]);
-
+      campaign_id]);
     if (exist.length === 0) {
       return res.status(404).json({ message: 'Campaign NOt Found' });
     }
-
+ 
     const campaign = exist[0];
     //Authorization Check
     if (user_role !== 'admin' && campaign.user_id !== user_id) {
@@ -124,21 +131,27 @@ export const updateCampaign = async (req, res) => {
       });
     }
 
-    // if (status && status !== campaign.status) {
-    //     if (req.user.role === "admin") {
-    //         updatedStatus = status;
-    //     } else {
-    //  // not admin
-    //         return res.status(403).json({ message: "Only admin can change campaign status" });
-    //     }
-    // }
-
-    //image validation
-    if (image_url && !validateImage(image_url)) {
-      return res
-        .status(400)
-        .json({ message: 'Only JPG, JPEG, PNG images are allowed' });
+  
+    let image_url;
+    //check image upload and replace old one by deleting it
+    //normal IF-ELSE case
+    if (req.file){
+      image_url = `/uploads/${req.file.filename}`;
     }
+    else {
+      image_url = campaign.image_url;
+    }
+  
+
+    if (req.file && campaign.image_url) {
+      //get the file path for old file
+      const oldPath = path.join("uploads", path.basename(campaign.image_url));
+      // }  delete the old file 
+     if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+
+    }
+
+
     if (start_date && end_date) {
       const dateCheck = validateDates(start_date, end_date);
       if (!dateCheck.valid) {
@@ -150,28 +163,33 @@ export const updateCampaign = async (req, res) => {
 
     await db.execute(
       `UPDATE campaigns 
-             SET title=?, description=?, contact_email=?, location=?, category=?, campaign_type=?, goals=?, image_url=?, start_date=?, end_date=?
-             WHERE id=?`,
+       SET title=?, description=?, contact_email=?, location=?, category=?, campaign_type=?, goals=?, image_url=?, start_date=?, end_date=?
+       WHERE id=?`,
       [
-        title,
-        description,
-        contact_email,
-        location,
-        category,
-        campaign_type,
-        goals,
+        title ?? campaign.title,
+        description ?? campaign.description,
+        contact_email ?? campaign.contact_email,
+        location ?? campaign.location,
+        category ?? campaign.category,
+        campaign_type ?? campaign.campaign_type,
+        goals ?? campaign.goals,
         image_url,
-        start_date,
-        end_date,
-        id,
-      ],
+        start_date ?? campaign.start_date,
+        end_date ?? campaign.end_date,
+        campaign_id,
+      ]
     );
-    res.json({ message: 'Campaign Updated Successfully' });
+    
+    res.json({ message: 'Campaign Updated Successfully', image_url});
   } catch (error) {
-    res.status(500).json({ mesasge: 'Server Error' });
+    console.log(error);
+    res.status(500).json({ message: 'Server Error' });
   }
 };
 
+
+
+// GET MY CAMPAIGNS
 export const getCampaigns = async (req, res) => {
   try {
     //take user id form token
@@ -199,6 +217,9 @@ export const getCampaigns = async (req, res) => {
   }
 };
 
+
+
+// GET ALL CAMPAIGNS
 export const getAllCampaigns = async (req, res) => {
   try {
     const [campaigns] = await db.execute('SELECT * FROM campaigns');
@@ -212,6 +233,10 @@ export const getAllCampaigns = async (req, res) => {
   }
 };
 
+
+
+
+// APPROVE CAMPAIGN BY ADMIN
 export const approveCampaign = async (req, res) => {
   try {
     const { id } = req.params;
@@ -235,6 +260,9 @@ export const approveCampaign = async (req, res) => {
   }
 };
 
+
+
+// DELETE CAMPAIGN
 export const deleteCampaign = async (req, res) => {
   try {
     const { id } = req.params; // campaign id from URL

@@ -4,9 +4,7 @@ import cors from 'cors';
 
 import authRoutes from './routes/authRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
-import voteRoutes from './routes/voteRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-
 import { protect } from './middleware/authMiddleware.js';
 
 dotenv.config();
@@ -32,14 +30,27 @@ app.use('/api/protected', protect, (req, res) => {
 });
 
 app.use('/api/campaigns', campaignRoutes);
-app.use('/api/votes', voteRoutes);
 
 // Test route
 app.get('/', (req, res) => {
   res.send('API is Working');
 });
 
+
+//global error handler
+app.use((err, req, res, next) => {
+    if (err instanceof Error) {
+        return res.status(400).json({
+            error: err.message
+        });
+    }
+
+    next();
+});
+
 // Start server
 app.listen(process.env.PORT, () => {
   console.log(`Server running on port ${process.env.PORT}`);
 });
+
+
