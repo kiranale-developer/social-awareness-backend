@@ -12,7 +12,12 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // Serve static files (uploaded images)
@@ -36,21 +41,18 @@ app.get('/', (req, res) => {
   res.send('API is Working');
 });
 
-
 //global error handler
 app.use((err, req, res, next) => {
-    if (err instanceof Error) {
-        return res.status(400).json({
-            error: err.message
-        });
-    }
+  if (err instanceof Error) {
+    return res.status(400).json({
+      error: err.message,
+    });
+  }
 
-    next();
+  next();
 });
 
 // Start server
 app.listen(process.env.PORT, () => {
   console.log(`Server running on port ${process.env.PORT}`);
 });
-
-
