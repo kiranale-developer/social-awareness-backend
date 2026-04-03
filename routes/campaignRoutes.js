@@ -1,45 +1,33 @@
 import express from 'express';
+import { protect } from '../middleware/authMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
 import {
-  createCampaign,
-  getCampaigns,
-  getAllCampaigns,
-  approveCampaign,
-  updateCampaign,
-  deleteCampaign,
+  getPublicCampaigns,createCampaign,
 } from '../controllers/campaignController.js';
+
 import {
   voteToCampaign,
   getCampaignVotes,
 } from '../controllers/voteController.js';
+
 import {
   supportCampaign,
-  getTotalSupportAmount,
-  inquiryCampaign,
 } from '../controllers/supportController.js';
-import { protect } from '../middleware/authMiddleware.js';
-import upload from '../middleware/uploadMiddleware.js';
+
+import { inquiryCampaign } from '../controllers/inquiryController.js';
+
 
 const router = express.Router();
 
 //PUBLIC ROUTES
-router.get('/', getAllCampaigns);
-router.get('/:campaign_id/votes', getCampaignVotes);
-router.get('/:campaign_id/supports', getTotalSupportAmount);
-router.post('/:campaign_id/inquiry', inquiryCampaign);
-
-//PROTECTED ROUTES
+router.get('/', getPublicCampaigns);
+// CREATE CAMPAIGN BY USER
 router.post('/create', protect, upload.single('image'), createCampaign);
-router.get('/my-campaigns', protect, getCampaigns);
-//vote campaign from user
+// PUBLIC OR USER
+router.get('/:campaign_id/votes', getCampaignVotes);
+
+// USER ACTIONS
 router.post('/:campaign_id/vote', protect, voteToCampaign);
-//support to the campaign from user
 router.post('/:campaign_id/support', protect, supportCampaign);
-
-//Routes With IDs
-router.put('/:campaign_id', protect, upload.single('image'), updateCampaign);
-router.delete('/:campaign_id', protect, deleteCampaign);
-
-//Admin/status Update
-router.patch('/approve/:id', protect, approveCampaign);
-
+router.post('/:campaign_id/inquiry',protect, inquiryCampaign);
 export default router;

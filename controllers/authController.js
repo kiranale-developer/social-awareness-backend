@@ -47,47 +47,65 @@ const refreshCookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
-//Register User
+//REGISTER NEW USER 
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, user_type, abn, phone, address } = req.body;
 
-    if (!name || !email || !password) {
+    // input forma validation
+    if (!name || !email || !password || !user_type) {
       return res.status(400).json({ message: 'All Fields are Required' });
     }
 
-    //check email validation
+    // Validate user_type
+    if (!['individual', 'business'].includes(user_type)) {
+      return res.status(400).json({ message: 'Invalid user type' });
+    }
+
+    // Email validation
     if (!validateEmail(email)) {
-      return res.status(400).json({ message: 'Please Enter Valid Email' });
+      return res.status(400).json({ message: 'Please enter a valid email' });
     }
 
-    //check password validation
+    // Password validation
     if (!validatePassword(password)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            'Password  must be at least 8 characters long and should contain at least a uppercase, a lowercase and a specail character',
-        });
+      return res.status(400).json({
+        message:
+          'Password must be at least 8 characters long and contain uppercase, lowercase, and a special character',
+      });
     }
 
-    //check is user already exist
-    const [existingUser] = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
-      [email],
-    );
-
+    // Check if user already exists
+    const [existingUser] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
     if (existingUser.length > 0) {
-      return res.status(400).json({ message: ' User is already exists' });
+      return res.status(400).json({ message: 'User already exists' });
     }
-    //password hash for strong password using bcrypt
+
+    // Hash password uwith bcrypt
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    //insert into table
-    await pool.query(
-      'INSERT INTO users (name, email, password) VALUES (?,?,?)',
-      [name, email, hashedPassword],
+    // if the user is business need more details
+    if (user_type === 'business') {
+      if (!abn || !phone || !address) {
+        return res.status(400).json({ message: 'ABN, phone, and business address are required for business users' });
+      } 
+   
+    const [result] = await pool.query(
+      'INSERT INTO users (name, email, password, user_type) VALUES (?,?,?,?)',
+      [name, email, hashedPassword, user_type]
     );
+
+    const userId = result.insertId;
+    
+      if (!/^\d{11}$/.test(abn)) {
+        return res.status(400).json({ message: 'Invalid ABN number' });
+      }
+
+      await pool.query(
+        'INSERT INTO business (user_id, abn, phone, address) VALUES (?,?,?,?)',
+        [userId, abn, phone, address]
+      );
+    }
 
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
@@ -95,6 +113,8 @@ export const register = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+
 
 //LOGIN
 export const login = async (req, res) => {
