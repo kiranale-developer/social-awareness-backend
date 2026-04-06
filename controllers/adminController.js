@@ -1,4 +1,4 @@
-import db from "../config/database.js";
+import pool from "../config/database.js";
 
 
 
@@ -29,7 +29,7 @@ export const getAllCampaigns = async (req, res) => {
     sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
     values.push(limitNum, offsetNum);
 
-    const [rows] = await db.query(sql, values);
+    const [rows] = await pool.query(sql, values);
 
     res.status(200).json({
       success: true,
@@ -54,7 +54,7 @@ export const adminApproveCampaign = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [exist] = await db.execute('SELECT * FROM campaigns WHERE id = ?', [
+    const [exist] = await pool.execute('SELECT * FROM campaigns WHERE id = ?', [
       id,
     ]);
 
@@ -62,7 +62,7 @@ export const adminApproveCampaign = async (req, res) => {
       return res.status(404).json({ message: 'Campaign not found' });
     }
 
-    await db.execute("UPDATE campaigns SET status = 'approved' WHERE id = ?", [
+    await pool.execute("UPDATE campaigns SET status = 'approved' WHERE id = ?", [
       id,
     ]);
 
@@ -92,7 +92,7 @@ export const adminUpdateCampaign = async (req, res) => {
     } = req.body;
 
     //check campaign in database
-    const [exist] = await db.execute(`SELECT * FROM campaigns WHERE id = ?`, [
+    const [exist] = await pool.execute(`SELECT * FROM campaigns WHERE id = ?`, [
       campaign_id]);
     if (exist.length === 0) {
       return res.status(404).json({ message: 'Campaign NOt Found' });
@@ -129,7 +129,7 @@ export const adminUpdateCampaign = async (req, res) => {
 
     // if everything oK
 
-    await db.execute(
+    await pool.execute(
       `UPDATE campaigns 
        SET title=?, description=?, contact_email=?, location=?, category=?, campaign_type=?, goals=?, image_url=?, status, start_date=?, end_date=?
        WHERE id=?`,
@@ -165,7 +165,7 @@ export const adminDeleteCampaign = async (req, res) => {
     const { id } = req.params; // campaign id from URL
 
     // 1. Check if campaign exists
-    const [rows] = await db.execute('SELECT * FROM campaigns WHERE id = ?', [
+    const [rows] = await pool.execute('SELECT * FROM campaigns WHERE id = ?', [
       id,
     ]);
 
@@ -174,7 +174,7 @@ export const adminDeleteCampaign = async (req, res) => {
     }
 
     // 3. Delete campaign
-    await db.execute('DELETE FROM campaigns WHERE id = ?', [id]);
+    await pool.execute('DELETE FROM campaigns WHERE id = ?', [id]);
 
     res.json({ message: 'Campaign deleted successfully' });
   } catch (error) {
@@ -190,7 +190,7 @@ export const getAllInquiries = async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const offset = (page - 1) * limitNum;
 
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT ci.*, c.title AS campaign_title
        FROM campaign_inquiries ci
        JOIN campaigns c ON ci.campaign_id = c.id
@@ -219,7 +219,7 @@ export const getAllSupports = async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const offset = (page - 1) * limitNum;
 
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT s.*, c.title AS campaign_title
        FROM supports s
        JOIN campaigns c ON s.campaign_id = c.id
@@ -242,19 +242,19 @@ export const getAllSupports = async (req, res) => {
 
 export const getAdminDashboard = async (req, res) => {
   try {
-    const [[campaigns]] = await db.query(
+    const [[campaigns]] = await pool.query(
       `SELECT COUNT(*) AS total FROM campaigns`
     );
 
-    const [[inquiries]] = await db.query(
+    const [[inquiries]] = await pool.query(
       `SELECT COUNT(*) AS total FROM campaign_inquiries`
     );
 
-    const [[supports]] = await db.query(
+    const [[supports]] = await pool.query(
       `SELECT COUNT(*) AS total FROM supports`
     );
 
-    const [[totalAmount]] = await db.query(
+    const [[totalAmount]] = await pool.query(
       `SELECT SUM(amount) AS total FROM supports`
     );
 

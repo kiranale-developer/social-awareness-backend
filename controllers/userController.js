@@ -1,4 +1,4 @@
-import db from '../config/database.js';
+import pool from '../config/database.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -31,7 +31,7 @@ export const updateMyCampaign = async (req, res) => {
     } = req.body;
 
     //check campaign in database
-    const [exist] = await db.execute(`SELECT * FROM campaigns WHERE id = ?`, [
+    const [exist] = await pool.execute(`SELECT * FROM campaigns WHERE id = ?`, [
       campaign_id]);
     if (exist.length === 0) {
       return res.status(404).json({ message: 'Campaign NOt Found' });
@@ -75,7 +75,7 @@ export const updateMyCampaign = async (req, res) => {
 
     // if everything oK
 
-    await db.execute(
+    await pool.execute(
       `UPDATE campaigns 
        SET title=?, description=?, contact_email=?, location=?, category=?, campaign_type=?, goals=?, image_url=?, start_date=?, end_date=?
        WHERE id=?`,
@@ -119,7 +119,7 @@ export const getMyCampaigns = async (req, res) => {
       params.push(user_id);
     }
 
-    const [campaigns] = await db.execute(get_query, params);
+    const [campaigns] = await pool.execute(get_query, params);
 
     res.json({
       total: campaigns.length,
@@ -140,7 +140,7 @@ export const deleteMyCampaign = async (req, res) => {
     const user_id = req.user.id;
 
 
-    const [rows] = await db.execute('SELECT * FROM campaigns WHERE id = ? AND user_id = ?', [
+    const [rows] = await pool.execute('SELECT * FROM campaigns WHERE id = ? AND user_id = ?', [
       campaign_id, user_id,
     ]);
 
@@ -149,7 +149,7 @@ export const deleteMyCampaign = async (req, res) => {
     }
 
 
-    await db.execute('DELETE FROM campaigns WHERE id = ? AND user_id = ?', [campaign_id,user_id]);
+    await pool.execute('DELETE FROM campaigns WHERE id = ? AND user_id = ?', [campaign_id,user_id]);
 
     res.json({ message: 'Campaign deleted successfully' });
   } catch (error) {
@@ -166,7 +166,7 @@ export const getMyCampaignInquiries = async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const offset = (page - 1) * limitNum;
 
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT ci.*, c.title AS campaign_title
        FROM campaign_inquiries ci
        JOIN campaigns c ON ci.campaign_id = c.id
@@ -194,7 +194,7 @@ export const getMyCampaignSupports = async (req, res) => {
   try {
     const user_id = req.user.id;
 
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       `SELECT 
           c.id AS campaign_id,
           c.title AS campaign_title,

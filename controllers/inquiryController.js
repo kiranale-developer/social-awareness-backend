@@ -1,4 +1,4 @@
-import db from "../config/database.js";
+import pool from "../config/database.js";
 import validateEmail from "../utils/emailValidator.js";
 
 // RECORD INQUIRY FOR A CAMPAIGN
@@ -19,7 +19,7 @@ export const inquiryCampaign = async (req, res) => {
       });
     }
 
-    await db.execute(
+    await pool.execute(
       `INSERT INTO campaign_inquiries (campaign_id, name, email, phone, message)
        VALUES (?, ?, ?, ?, ?)`,
       [

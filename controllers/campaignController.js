@@ -1,4 +1,4 @@
-import db from '../config/database.js';
+import pool from '../config/database.js';
 
 // GET ONLY APPROVED CAMPAIGNS WITH SEARCH AND FILTER
 export const getPublicCampaigns = async (req, res) => {
@@ -19,7 +19,7 @@ export const getPublicCampaigns = async (req, res) => {
     sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
     values.push(limitNum, offsetNum);
 
-    const [rows] = await db.query(sql, values);
+    const [rows] = await pool.query(sql, values);
 
     res.status(200).json({
       success: true,
@@ -93,7 +93,7 @@ export const createCampaign = async (req, res) => {
       });
     }
 
-    const [result] = await db.execute(
+    const [result] = await pool.execute(
       `INSERT INTO campaigns (user_id, title, description, contact_email, location, category, campaign_type, goals, image_url, start_date, end_date)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [

@@ -1,4 +1,4 @@
-import db from '../config/database.js';
+import pool from '../config/database.js';
 
 let voteColumnCache = null;
 
@@ -7,7 +7,7 @@ const getVoteColumn = async () => {
     return voteColumnCache;
   }
 
-  const [rows] = await db.execute(
+  const [rows] = await pool.execute(
     `SELECT COLUMN_NAME
          FROM INFORMATION_SCHEMA.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE()
@@ -93,7 +93,7 @@ export const voteToCampaign = async (req, res) => {
       });
     }
 
-    await db.execute(
+    await pool.execute(
       `INSERT INTO votes (user_id, campaign_id, ${voteColumn}) VALUES (?,?,?) ON DUPLICATE KEY UPDATE
             ${voteColumn} = VALUES(${voteColumn})`,
       [user_id, campaign_id, dbVote],
@@ -102,7 +102,7 @@ export const voteToCampaign = async (req, res) => {
     const upvoteValue = voteColumn === 'reaction' ? 'like' : 'upvote';
     const downvoteValue = voteColumn === 'reaction' ? 'dislike' : 'downvote';
 
-    const [countRows] = await db.execute(
+    const [countRows] = await pool.execute(
       `SELECT
                 COALESCE(SUM(CASE WHEN ${voteColumn} = ? THEN 1 ELSE 0 END), 0) AS upvotes,
                 COALESCE(SUM(CASE WHEN ${voteColumn} = ? THEN 1 ELSE 0 END), 0) AS downvotes
@@ -131,7 +131,7 @@ export const getCampaignVotes = async (req, res) => {
     const upvoteValue = voteColumn === 'reaction' ? 'like' : 'upvote';
     const downvoteValue = voteColumn === 'reaction' ? 'dislike' : 'downvote';
 
-    const [countRows] = await db.execute(
+    const [countRows] = await pool.execute(
       `SELECT
                 COALESCE(SUM(CASE WHEN ${voteColumn} = ? THEN 1 ELSE 0 END), 0) AS upvotes,
                 COALESCE(SUM(CASE WHEN ${voteColumn} = ? THEN 1 ELSE 0 END), 0) AS downvotes
@@ -142,7 +142,7 @@ export const getCampaignVotes = async (req, res) => {
 
     let userVote = null;
     if (user_id) {
-      const [userRows] = await db.execute(
+      const [userRows] = await pool.execute(
         `SELECT ${voteColumn} AS user_vote
                  FROM votes
                  WHERE user_id = ? AND campaign_id = ?`,
