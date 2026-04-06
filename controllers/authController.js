@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 import pool from '../config/database.js';
-import validatePassword from '../utils/passwordVAlidator.js';
+import validatePassword from '../utils/passwordValidator.js';
 import validateEmail from '../utils/emailValidator.js';
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m';
