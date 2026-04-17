@@ -18,6 +18,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = mysql.createPool(process.env.DATABASE_URL);
+const pool = mysql.createPool(process.env.MYSQL_URL);
 
 export default pool;
