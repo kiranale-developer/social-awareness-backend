@@ -119,7 +119,9 @@ export const register = async (req, res) => {
 //LOGIN
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // const { email, password } = req.body;
+    const email = req.body.email.trim();
+    const password = req.body.password.trim();
 
     const [check] = await pool.query('SELECT * FROM users WHERE email = ?', [
       email,
