@@ -76,36 +76,43 @@ export const register = async (req, res) => {
     }
 
     // Check if user already exists
-    const [existingUser] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (existingUser.length > 0) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+const [existingUser] = await pool.query(
+  'SELECT * FROM users WHERE email = ?',
+  [email]
+);
 
-    // Hash password uwith bcrypt
-    const hashedPassword = await bcrypt.hash(password, 10);
+if (existingUser.length > 0) {
+  return res.status(400).json({ message: 'User already exists' });
+}
 
-    // if the user is business need more details
-    if (user_type === 'business') {
-      if (!abn || !phone || !address) {
-        return res.status(400).json({ message: 'ABN, phone, and business address are required for business users' });
-      } 
-   
-    const [result] = await pool.query(
-      'INSERT INTO users (name, email, password, user_type) VALUES (?,?,?,?)',
-      [name, email, hashedPassword, user_type]
-    );
+// Hash password with bcrypt
+const hashedPassword = await bcrypt.hash(password, 10);
 
-    const userId = result.insertId;
-    
-      if (!/^\d{11}$/.test(abn)) {
-        return res.status(400).json({ message: 'Invalid ABN number' });
-      }
+// Insert user for BOTH individual and business
+const [result] = await pool.query(
+  'INSERT INTO users (name, email, password, user_type) VALUES (?, ?, ?, ?)',
+  [name, email, hashedPassword, user_type]
+);
 
-      await pool.query(
-        'INSERT INTO business (user_id, abn, phone, address) VALUES (?,?,?,?)',
-        [userId, abn, phone, address]
-      );
-    }
+const userId = result.insertId;
+
+// If business, then insert extra business details
+if (user_type === 'business') {
+  if (!abn || !phone || !address) {
+    return res.status(400).json({
+      message: 'ABN, phone, and business address are required for business users',
+    });
+  }
+
+  if (!/^\d{11}$/.test(abn)) {
+    return res.status(400).json({ message: 'Invalid ABN number' });
+  }
+
+  await pool.query(
+    'INSERT INTO business (user_id, abn, phone, address) VALUES (?, ?, ?, ?)',
+    [userId, abn, phone, address]
+  );
+}
 
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
