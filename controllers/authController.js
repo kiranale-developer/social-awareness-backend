@@ -47,18 +47,18 @@ const refreshCookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
-//REGISTER NEW USER 
+//REGISTER NEW USER
 export const register = async (req, res) => {
   try {
-    const { name, email, password, user_type, abn, phone, address } = req.body;
+    const { name, email, password, role, abn, phone, address } = req.body;
 
     // input forma validation
-    if (!name || !email || !password || !user_type) {
+    if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'All Fields are Required' });
     }
 
-    // Validate user_type
-    if (!['individual', 'business'].includes(user_type)) {
+    // Validate role
+    if (!['user', 'business'].includes(role)) {
       return res.status(400).json({ message: 'Invalid user type' });
     }
 
@@ -76,7 +76,10 @@ export const register = async (req, res) => {
     }
 
     // Check if user already exists
-    const [existingUser] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [existingUser] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email],
+    );
     if (existingUser.length > 0) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -85,25 +88,33 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // if the user is business need more details
-    if (user_type === 'business') {
+    if (role === 'business') {
       if (!abn || !phone || !address) {
-        return res.status(400).json({ message: 'ABN, phone, and business address are required for business users' });
-      } 
-   
-    const [result] = await pool.query(
-      'INSERT INTO users (name, email, password, user_type) VALUES (?,?,?,?)',
-      [name, email, hashedPassword, user_type]
-    );
+        return res.status(400).json({
+          message:
+            'ABN, phone, and business address are required for business users',
+        });
+      }
 
-    const userId = result.insertId;
-    
+      const [result] = await pool.query(
+        'INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)',
+        [name, email, hashedPassword, role],
+      );
+
+      const userId = result.insertId;
+
       if (!/^\d{11}$/.test(abn)) {
         return res.status(400).json({ message: 'Invalid ABN number' });
       }
 
       await pool.query(
         'INSERT INTO business (user_id, abn, phone, address) VALUES (?,?,?,?)',
-        [userId, abn, phone, address]
+        [userId, abn, phone, address],
+      );
+    } else {
+      await pool.query(
+        'INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)',
+        [name, email, hashedPassword, role],
       );
     }
 
@@ -113,8 +124,6 @@ export const register = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
-
-
 
 //LOGIN
 export const login = async (req, res) => {
@@ -144,10 +153,14 @@ export const login = async (req, res) => {
       message: 'Login Successful',
       token: accessToken,
       accessToken,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'SErver Error' });
+    res.status(500).json({ message: 'Server Error' });
   }
 };
 
