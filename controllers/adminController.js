@@ -1,6 +1,38 @@
-import pool from "../config/database.js";
+import pool from '../config/database.js';
+import validateDates from '../utils/validateDates.js';
 
+// GET ALL USERS
+export const getAllUsers = async (req, res) => {
+  try {
+    const { role, page = 1, limit = 20 } = req.query;
+    const limitNum = Math.max(1, parseInt(limit, 10) || 20);
+    const offsetNum = Math.max(0, (parseInt(page, 10) - 1) * limitNum);
 
+    let sql = `SELECT * FROM users WHERE 1=1`;
+    const values = [];
+
+    if (role && role.trim() !== '') {
+      sql += ` AND role = ?`;
+      values.push(role.trim());
+    }
+
+    sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    values.push(limitNum, offsetNum);
+
+    const [rows] = await pool.query(sql, values);
+
+    res.status(200).json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error.message);
+    res
+      .status(500)
+      .json({ success: false, message: 'Server error while fetching users' });
+  }
+};
 
 //GET ALL CAMPAIGNS AND SELECT FILTER
 export const getAllCampaigns = async (req, res) => {
@@ -38,7 +70,6 @@ export const getAllCampaigns = async (req, res) => {
       limit: limitNum,
       data: rows,
     });
-
   } catch (error) {
     console.error('Error fetching campaigns:', error.message);
     res.status(500).json({
@@ -48,11 +79,20 @@ export const getAllCampaigns = async (req, res) => {
   }
 };
 
-
-// APPROVE CAMPAIGN BY ADMIN
+// UPDATE CAMPAIGN STATUS BY ADMIN
 export const adminApproveCampaign = async (req, res) => {
   try {
     const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['pending', 'active', 'rejected'];
+    if (!status || !validStatuses.includes(status)) {
+      return res
+        .status(400)
+        .json({
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+        });
+    }
 
     const [exist] = await pool.execute('SELECT * FROM campaigns WHERE id = ?', [
       id,
@@ -62,11 +102,12 @@ export const adminApproveCampaign = async (req, res) => {
       return res.status(404).json({ message: 'Campaign not found' });
     }
 
-    await pool.execute("UPDATE campaigns SET status = 'approved' WHERE id = ?", [
+    await pool.execute('UPDATE campaigns SET status = ? WHERE id = ?', [
+      status,
       id,
     ]);
 
-    res.json({ message: 'Campaign approved successfully' });
+    res.json({ message: `Campaign status updated to ${status}` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
@@ -75,9 +116,8 @@ export const adminApproveCampaign = async (req, res) => {
 
 export const adminUpdateCampaign = async (req, res) => {
   try {
-    
     const { campaign_id } = req.params;
-   
+
     const {
       title,
       description,
@@ -93,32 +133,29 @@ export const adminUpdateCampaign = async (req, res) => {
 
     //check campaign in database
     const [exist] = await pool.execute(`SELECT * FROM campaigns WHERE id = ?`, [
-      campaign_id]);
+      campaign_id,
+    ]);
     if (exist.length === 0) {
       return res.status(404).json({ message: 'Campaign NOt Found' });
     }
- 
+
     const campaign = exist[0];
-  
+
     let image_url;
     //check image upload and replace old one by deleting it
     //normal IF-ELSE case
-    if (req.file){
+    if (req.file) {
       image_url = `/uploads/${req.file.filename}`;
-    }
-    else {
+    } else {
       image_url = campaign.image_url;
     }
-  
 
     if (req.file && campaign.image_url) {
       //get the file path for old file
-      const oldPath = path.join("uploads", path.basename(campaign.image_url));
-      // }  delete the old file 
-     if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-
+      const oldPath = path.join('uploads', path.basename(campaign.image_url));
+      // }  delete the old file
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
-
 
     if (start_date && end_date) {
       const dateCheck = validateDates(start_date, end_date);
@@ -146,18 +183,15 @@ export const adminUpdateCampaign = async (req, res) => {
         start_date ?? campaign.start_date,
         end_date ?? campaign.end_date,
         campaign_id,
-      ]
+      ],
     );
-    
-    res.json({ message: 'Campaign Updated Successfully', image_url});
+
+    res.json({ message: 'Campaign Updated Successfully', image_url });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
-
-
-
 
 // DELETE ANY CAMPAIGN BY ADMIN
 export const adminDeleteCampaign = async (req, res) => {
@@ -182,7 +216,6 @@ export const adminDeleteCampaign = async (req, res) => {
   }
 };
 
-
 export const getAllInquiries = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -196,19 +229,52 @@ export const getAllInquiries = async (req, res) => {
        JOIN campaigns c ON ci.campaign_id = c.id
        ORDER BY ci.created_at DESC
        LIMIT ? OFFSET ?`,
-      [limitNum, offset]
+      [limitNum, offset],
     );
 
     res.status(200).json({
       success: true,
       data: rows,
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      message: "Error fetching inquiries",
+      message: 'Error fetching inquiries',
     });
+  }
+};
+
+export const getCampaignInquiries = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.query(
+      `SELECT ci.* FROM campaign_inquiries ci
+       WHERE ci.campaign_id = ?
+       ORDER BY ci.created_at DESC`,
+      [id],
+    );
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching campaign inquiries' });
+  }
+};
+
+export const getCampaignSupports = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.query(
+      `SELECT s.*, u.name AS user_name, u.email AS user_email
+       FROM supports s
+       LEFT JOIN users u ON s.user_id = u.id
+       WHERE s.campaign_id = ?
+       ORDER BY s.created_at DESC`,
+      [id],
+    );
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching campaign supports' });
   }
 };
 
@@ -220,22 +286,22 @@ export const getAllSupports = async (req, res) => {
     const offset = (page - 1) * limitNum;
 
     const [rows] = await pool.query(
-      `SELECT s.*, c.title AS campaign_title
+      `SELECT s.*, c.title AS campaign_title, u.name AS user_name, u.email AS user_email
        FROM supports s
        JOIN campaigns c ON s.campaign_id = c.id
+       LEFT JOIN users u ON s.user_id = u.id
        ORDER BY s.created_at DESC
        LIMIT ? OFFSET ?`,
-      [limitNum, offset]
+      [limitNum, offset],
     );
 
     res.status(200).json({
       success: true,
       data: rows,
     });
-
   } catch (error) {
     res.status(500).json({
-      message: "Error fetching supports",
+      message: 'Error fetching supports',
     });
   }
 };
@@ -243,19 +309,23 @@ export const getAllSupports = async (req, res) => {
 export const getAdminDashboard = async (req, res) => {
   try {
     const [[campaigns]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM campaigns`
+      `SELECT COUNT(*) AS total FROM campaigns`,
     );
 
     const [[inquiries]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM campaign_inquiries`
+      `SELECT COUNT(*) AS total FROM campaign_inquiries`,
     );
 
     const [[supports]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM supports`
+      `SELECT COUNT(*) AS total FROM supports`,
     );
 
     const [[totalAmount]] = await pool.query(
-      `SELECT SUM(amount) AS total FROM supports`
+      `SELECT SUM(amount) AS total FROM supports`,
+    );
+
+    const [[users]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM users WHERE role = 'user'`,
     );
 
     res.status(200).json({
@@ -263,11 +333,11 @@ export const getAdminDashboard = async (req, res) => {
       totalInquiries: inquiries.total,
       totalSupports: supports.total,
       totalFunding: totalAmount.total || 0,
+      totalUsers: users.total,
     });
-
   } catch (error) {
     res.status(500).json({
-      message: "Dashboard error",
+      message: 'Dashboard error',
     });
   }
 };

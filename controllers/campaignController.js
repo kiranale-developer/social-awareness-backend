@@ -1,6 +1,8 @@
 import pool from '../config/database.js';
+import validateEmail from '../utils/emailValidator.js';
+import validateDates from '../utils/validateDates.js';
 
-// GET ONLY APPROVED CAMPAIGNS WITH SEARCH AND FILTER
+// GET ONLY ACTIVE CAMPAIGNS WITH SEARCH AND FILTER
 export const getPublicCampaigns = async (req, res) => {
   try {
     const { location = '', page = 1, limit = 10 } = req.query;
@@ -8,7 +10,7 @@ export const getPublicCampaigns = async (req, res) => {
     const limitNum = Math.max(1, parseInt(limit, 10) || 10);
     const offsetNum = Math.max(0, (parseInt(page, 10) - 1) * limitNum);
 
-    let sql = `SELECT * FROM campaigns WHERE status = 'pending'`;
+    let sql = `SELECT * FROM campaigns WHERE status = 'active'`;
     const values = [];
 
     if (location && location.trim() !== '') {
@@ -50,7 +52,6 @@ export const createCampaign = async (req, res) => {
       start_date,
       end_date,
     } = req.body;
-
 
     if (
       !title ||

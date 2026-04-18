@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import pool from "./config/database.js";
 
 import authRoutes from './routes/authRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
@@ -45,6 +46,18 @@ app.get('/', (req, res) => {
   res.send('API is Working');
 });
 
+app.get("/db-test", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT 1 AS test");
+    res.json({ ok: true, rows });
+  } catch (error) {
+    console.error("DB test error:", error);
+    res.status(500).json({
+      ok: false,
+      error: error?.message || "Unknown DB error",
+    });
+  }
+});
 //global error handler
 app.use((err, req, res, next) => {
   if (err instanceof Error) {

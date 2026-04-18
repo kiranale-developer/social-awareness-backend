@@ -128,21 +128,23 @@ export const register = async (req, res) => {
 //LOGIN
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // const { email, password } = req.body;
+    const email = req.body.email.trim();
+    const password = req.body.password.trim();
 
     const [check] = await pool.query('SELECT * FROM users WHERE email = ?', [
       email,
     ]);
 
     if (check.length === 0) {
-      return res.status(400).json({ message: 'Invalid Credentails' });
+      return res.status(400).json({ message: 'Invalid redentails' });
     }
 
     const user = check[0];
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid Credentails' });
+      return res.status(400).json({ message: 'Invalid Creentails' });
     }
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
